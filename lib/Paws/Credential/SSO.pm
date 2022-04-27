@@ -1,6 +1,7 @@
 package Paws::Credential::SSO {
   use Moose;
   use Digest::SHA qw/sha1_hex/;
+  use DateTime::Format::ISO8601;
   use Config::AWS qw/read_file/;
   use File::HomeDir;
   use JSON::MaybeXS qw/decode_json/;
@@ -59,7 +60,10 @@ package Paws::Credential::SSO {
     my $sso_credentials_json = <$sso_credentials_file_fh>;
     close $sso_credentials_file_fh;
 
-    return JSON::MaybeXS->new->utf8->decode($sso_credentials_json)->{Credentials};
+    my $credentials = JSON::MaybeXS->new->utf8->decode($sso_credentials_json)->{Credentials};
+    my $expiration = DateTime::Format::ISO8601->parse_datetime($credentials->{Expiration})->epoch;
+
+    return time < $expiration? $credentials : {};
   });
 
   sub access_key {
